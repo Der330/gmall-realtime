@@ -1,0 +1,193 @@
+CREATE TABLE KafkaTable (
+  `database` STRING,
+  `table` STRING,
+  `type` STRING,
+  `data` map<string,string>,
+  `old` map<string,string>,
+  `ts` BIGINT,
+  `pt` as proctime(),
+  `et` as TO_TIMESTAMP_LTZ(ts, 0),
+WATERMARK FOR et AS et
+) WITH (
+  'connector' = 'kafka',
+  'topic' = 'topic_db',
+  'properties.bootstrap.servers' = 'hadoop102:9092',
+  'properties.group.id' = 'testGroup',
+  'scan.startup.mode' = 'earliest-offset',
+  'format' = 'json'
+)
+
+select
+    date['id'],
+    date['user_id'],
+    date['sku_id'],
+    date['appraise'],
+    date['comment_txt'],
+    ts,
+    pt
+from commentSource where `table` = 'comment_info' and type in ('insert','update')
+
+CREATE TABLE dicSource (
+ dic_code STRING,
+ info ROW<dic_name STRING>,
+ PRIMARY KEY (dic_code) NOT ENFORCED
+) WITH (
+ 'connector' = 'hbase-2.2',
+ 'table-name' = 'gmall:dim_base_dic',
+ 'zookeeper.quorum' = 'hadoop102:2181',
+ 'lookup.cache' = 'PARTIAL',
+ 'lookup.partial-cache.max-rows' = '2000',
+ 'lookup.partial-cache.expire-after-write' = '1 hour',
+ 'lookup.partial-cache.expire-after-access' = '1 hour'
+);
+
+
+SELECT
+    c.id,
+    c.user_id,
+    c.sku_id,
+    c.appraise,
+    d.dic_name,
+    c.comment_txt,
+    c.pt,
+    c.ts
+FROM commentTable AS c
+JOIN dicSource FOR SYSTEM_TIME AS OF o.pt AS d
+    ON c.appraise = d.dic_code
+
+
+CREATE TABLE commentSinkTable (
+    id  string,
+    user_id string,
+    sku_id  string,
+    appraise    string,
+    appraise_name    string,
+    comment_txt string,
+    ts  bigint
+    PRIMARY KEY (id) NOT ENFORCED
+) WITH (
+  'connector' = 'upsert-kafka',
+  'topic' = 'dim_comment_info',
+  'properties.bootstrap.servers' = 'hadoop102:9092',
+  'key.format' = 'json',
+  'value.format' = 'json',
+  'sink.parallelism' = '4'
+);
+
+//DWS层流量域关键词粒度
+Source
+
+CREATE TABLE pagelog (
+  `page` map<string,string>,
+  `ts` bigint,
+  `et` to_timestamp_ltz(ts, 3),
+  WATERMARK FOR et AS et - INTERVAL '5' SECOND
+)
+//筛选搜索数据
+select
+    page['item'] kw,
+    et
+from page_log
+where page['item'] is not null
+and page['last_page_id'] = 'search'
+and page['item_type'] = 'keyword'
+
+//分词聚合
+select
+    split_word(kw)
+from search_table
+
+SELECT et, w
+FROM search_table,
+LATERAL TABLE(split_word(kw)) t(w)
+
+//开窗聚合
+select
+    w,
+    et,
+    window_start
+from TABLE(
+        TUMBLE(TABLE split_table, DESCRIPTOR(et), INTERVAL '10' SECOND));
+
+SELECT window_start, window_end, COUNT(w) AS k_COUNT
+  FROM TABLE(
+    TUMBLE(TABLE split_table, DESCRIPTOR(et), INTERVAL '10' SECOND))
+  GROUP BY window_start, window_end;
+
+
+SELECT
+    date_format(window_start,'yyyy-MM-dd HH:mm:ss') sta,
+    date_format(window_end,'yyyy-MM-dd HH:mm:ss') end,
+    date_format(window_start,'yyyy-MM-dd') win_date,
+    w,
+    count(*) cnt
+FROM TABLE
+(
+  TUMBLE(TABLE split_table, DESCRIPTOR(et), INTERVAL '5' SECOND)
+)
+GROUP BY window_start,window_end,w
+
+//Doris表连接器
+create dorisSink(
+    stt string,
+    edt string,
+    win_date string,
+    w string,
+    et bigint
+)
+
+
+
+INSERT INTO dorisSink (stt, edt, cur_date, keyword, keyword_count) VALUES
+('2024-09-01 12:30:45', '2024-09-01 13:30:45', '2024-09-01', 'example1', 1234567890),
+('2024-09-02 14:45:30', '2024-09-02 15:45:30', '2024-09-02', 'example2', 2345678901),
+('2024-09-03 16:00:00', '2024-09-03 17:00:00', '2024-09-03', 'example3', 3456789012);
+
+
+CREATE TABLE KafkaTable (
+  `page` map<string,string>,
+  `ts` bigint,
+  `et` as TO_TIMESTAMP_LTZ(ts, 3),
+  WATERMARK FOR et AS et
+) WITH (
+  'connector' = 'kafka',
+  'topic' = 'user_behavior',
+  'properties.bootstrap.servers' = 'localhost:9092',
+  'properties.group.id' = 'testGroup',
+  'scan.startup.mode' = 'earliest-offset',
+  'format' = 'csv'
+)
+
+select
+    page['item'] kw,
+    et
+from page_log
+where page['item'] is not null
+and page['last_page_id'] = 'search'
+and page['item_type'] = 'keyword'
+
+
+select
+    et,
+    word
+from pageItem,
+LATERAL TABLE(split_word(kw)) t(word)
+
+SELECT
+    date_format(window_start,'yyyy-MM-dd HH:mm:ss') as stt,
+    date_format(window_end,'yyyy-MM-dd HH:mm:ss') as edt,
+    date_format(window_start,'yyyy-MM-dd') as cur_date,
+    word keyword,
+    count(*) AS keyword_count
+  FROM TABLE(
+    TUMBLE(TABLE splitedTable, DESCRIPTOR(et), INTERVAL '10' SECOND))
+  GROUP BY stt, edt,cur_date,keyword
+
+
+CREATE TABLE dorisSink (
+    stt           string,
+    edt           string,
+    cur_date     string,
+    keyword       string,
+    keyword_count` BIGINT
+    )
