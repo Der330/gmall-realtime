@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="gmall-publisher" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="gmall-realtime" target="1.8" />
+      <module name="realtime-common" target="1.8" />
+      <module name="realtime-dim" target="1.8" />
+      <module name="realtime-dwd" target="1.8" />
+      <module name="realtime-dwd-base-db" target="1.8" />
+      <module name="realtime-dwd-base-log" target="1.8" />
+      <module name="realtime-dwd-interaction-comment-info" target="1.8" />
+      <module name="realtime-dwd-trade-cart-add" target="1.8" />
+      <module name="realtime-dwd-trade-order-cancel-detail" target="1.8" />
+      <module name="realtime-dwd-trade-order-detail" target="1.8" />
+      <module name="realtime-dwd-trade-order-pay-suc-detail" target="1.8" />
+      <module name="realtime-dwd-trade-order-refund" target="1.8" />
+      <module name="realtime-dwd-trade-refund-pay-suc-detail" target="1.8" />
+      <module name="realtime-dws" target="1.8" />
+      <module name="realtime-dws-trade-sku-order" target="1.8" />
+      <module name="realtime-dws-traffic-home-detail-page-view-window" target="1.8" />
+      <module name="realtime-dws-traffic-source-keyword-page-view-window" target="1.8" />
+      <module name="realtime-dws-traffic-vc-ch-ar-is_new-page-view-window" target="1.8" />
+    </bytecodeTargetLevel>
+  </component>
+</project>
